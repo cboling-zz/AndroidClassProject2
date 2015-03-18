@@ -7,6 +7,15 @@
     android:icon="@mipmap/ic_launcher"
     android:label="@string/app_name"
     android:theme="@style/AppTheme">
+
+    <!-- Need access to camera -->
+    <uses-feature
+      android:name="android.hardware.camera"
+      android:required="true"/>
+
+    <!-- Need access to save image to external storage -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
     <activity
       android:name=".MainActivity"
       android:label="@string/app_name">

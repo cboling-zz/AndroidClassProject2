@@ -1,7 +1,9 @@
 package net.bcsw.dailyselfie;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v7.app.ActionBarActivity;
@@ -9,21 +11,56 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.Calendar;
+import java.util.Date;
 
+/**
+ * Main Activity  for Coursera Android Programming #2 Peer Reviews Project
+ * <p/>
+ * Requirement #1: If the user clicks on the camera icon on the ActionBar, the app will open up a
+ * picture-­‐ taking app already installed on the device.
+ * <p/>
+ * Requirement #2: If the user now snaps a picture and accepts it, the picture is returned to the
+ * DailySelfie app and then displayed in some way to the user along with other selfies the user may
+ * have already taken.  (Show bitmap on left portion of new listView item anlong with name (ie date
+ * & time)
+ * <p/>
+ * Requirement #3: If the user clicks on the small view, then a large view will open up, showing the
+ * selfie in a larger format.
+ */
 public class MainActivity extends ActionBarActivity
 {
-    private static final String TAG                   = "MainActivity";
-    static final         int    REQUEST_IMAGE_CAPTURE = 1;
+    private static final String TAG                 = "MainActivity";
+    static final         int    REQUEST_TAKE_PHOTO  = 1;
+    static final         String EXTRA_DATE_TAKEN    = "DateTaken";
+    static final         String EXTRA_DATE_FILENAME = "ImageFileName";
 
     private SelphieViewAdapter mAdapter;
+
+    private SharedPreferences prefs;
+    private        long   lastSelphieTime    = 0;                       // Last time a selphie was taken
+    private static String LAST_SELPHIE_TICKS = "last_selfie_ticks";
+
+    static final int MIN_SELPHIE_TIMEOUT = 2 * 60 * 1000;  // Ask for selfie every two minutes
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-    }
 
+        // Expand our view now
+
+        setContentView(R.layout.activity_main);
+
+        // Load last time a selphie was made from shared preference storage
+
+        prefs = getPreferences(MODE_PRIVATE);
+
+        lastSelphieTime = prefs.getLong(LAST_SELPHIE_TICKS, 0);
+
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
@@ -54,7 +91,8 @@ public class MainActivity extends ActionBarActivity
     }
 
     /**
-     * Launch an already installed camera application to take a selfie for us
+     * Launch an already installed camera application to take a selfie for us.  The
+     * Intent will save the photo to a file we supply and return a bitmap image
      *
      * @return true if successfully launched
      */
@@ -65,9 +103,27 @@ public class MainActivity extends ActionBarActivity
 
         if (takePictureIntent.resolveActivity(getPackageManager()) != null)
         {
-            Log.i(TAG, "launchCameraApp: starting camera activity for result");
-            startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE);
-            return true;
+            try
+            {
+                // Create the file that should hold the new photo
+
+                Date imageDate = new Date(Calendar.getInstance().getTimeInMillis());
+                File imageFile = SelfieRecord.CreateImageFile(imageDate);
+
+                takePictureIntent.putExtra(EXTRA_DATE_TAKEN, imageDate);
+                takePictureIntent.putExtra(EXTRA_DATE_FILENAME, imageFile.toString());
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(imageFile));
+
+                Log.i(TAG, "launchCameraApp: starting camera activity for result");
+
+                startActivityForResult(takePictureIntent, REQUEST_TAKE_PHOTO);
+
+                return true;
+            }
+            catch (IOException e)
+            {
+                Log.w(TAG, "launchCameraApp: IO Exception: " + e);
+            }
         }
         return false;
     }
@@ -75,7 +131,7 @@ public class MainActivity extends ActionBarActivity
     /**
      * Handle the response from any activities that return an result
      *
-     * @param requestCode Request code for activity0
+     * @param requestCode Request code for activity
      * @param resultCode  The result
      * @param data        associated data with result
      */
@@ -85,14 +141,41 @@ public class MainActivity extends ActionBarActivity
         Log.i(TAG,
               "onActivityResult: entered, request: " + requestCode + ", result: " + resultCode);
 
-        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK)
+        if (requestCode == REQUEST_TAKE_PHOTO)
         {
-            Bundle extras = data.getExtras();
-            Bitmap thumbnail = (Bitmap) extras.get("data");
+            if (resultCode == RESULT_OK)
+            {
+                Bundle extras = data.getExtras();
+                Bitmap thumbnail = (Bitmap) extras.get("data");
+                Date imageDate = (Date) extras.get(EXTRA_DATE_TAKEN);
+                String fileName = extras.getString(EXTRA_DATE_FILENAME);
 
-            SelfieRecord item = new SelfieRecord(thumbnail);
+                // TODO: Also extract filename
 
-            mAdapter.add(item);
+                SelfieRecord item = new SelfieRecord(imageDate, fileName, thumbnail);
+
+                mAdapter.add(item);
+
+                // Update last selphie time
+
+                lastSelphieTime = imageDate.getTime();
+
+                SharedPreferences.Editor editor = prefs.edit();
+                editor.putLong(LAST_SELPHIE_TICKS, lastSelphieTime);
+                editor.commit();
+            }
         }
+        // Reschedule notify update
+
+        scheduleSelphieNotification();
     }
+
+    private void scheduleSelphieNotification()
+    {
+        // lastSelphieTime  <- ticks last one taken at
+        // int MIN_SELPHIE_TIMEOUT = 2 * 60 * 1000;  // Ask for selfie every two minutes
+
+
+    }
+
 }
