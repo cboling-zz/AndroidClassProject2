@@ -10,6 +10,8 @@ import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ListView;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,29 +39,39 @@ public class MainActivity extends ActionBarActivity
     static final         String EXTRA_DATE_TAKEN    = "DateTaken";
     static final         String EXTRA_DATE_FILENAME = "ImageFileName";
 
-    private SelphieViewAdapter mAdapter;
+    private SelfieViewAdapter mAdapter;
+    private ListView          imageListView;
 
     private SharedPreferences prefs;
-    private        long   lastSelphieTime    = 0;                       // Last time a selphie was taken
-    private static String LAST_SELPHIE_TICKS = "last_selfie_ticks";
+    private        long   lastSelfieTime    = 0;                       // Last time a selphie was taken
+    private static String LAST_SELFIE_TICKS = "last_selfie_ticks";
 
-    static final int MIN_SELPHIE_TIMEOUT = 2 * 60 * 1000;  // Ask for selfie every two minutes
+    static final int MIN_SELFIE_TIMEOUT = 2 * 60 * 1000;  // Ask for selfie every two minutes
 
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
 
-        // Expand our view now
+        // Expand our view now and obtain a reference to the image ListView
 
         setContentView(R.layout.activity_main);
+        imageListView = (ListView) findViewById(R.id.listView);
 
-        // Load last time a selphie was made from shared preference storage
+        // Load last time a selfie was made from shared preference storage
 
         prefs = getPreferences(MODE_PRIVATE);
 
-        lastSelphieTime = prefs.getLong(LAST_SELPHIE_TICKS, 0);
+        lastSelfieTime = prefs.getLong(LAST_SELFIE_TICKS, 0);
 
+        imageListView.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View view)
+            {
+                launchImageViewActivity(view);
+            }
+        });
     }
 
     @Override
@@ -156,26 +168,37 @@ public class MainActivity extends ActionBarActivity
 
                 mAdapter.add(item);
 
-                // Update last selphie time
+                // Update last selfie time
 
-                lastSelphieTime = imageDate.getTime();
+                lastSelfieTime = imageDate.getTime();
 
                 SharedPreferences.Editor editor = prefs.edit();
-                editor.putLong(LAST_SELPHIE_TICKS, lastSelphieTime);
+                editor.putLong(LAST_SELFIE_TICKS, lastSelfieTime);
                 editor.commit();
             }
         }
         // Reschedule notify update
 
-        scheduleSelphieNotification();
+        scheduleSelfieNotification();
     }
 
-    private void scheduleSelphieNotification()
+    private void scheduleSelfieNotification()
     {
-        // lastSelphieTime  <- ticks last one taken at
-        // int MIN_SELPHIE_TIMEOUT = 2 * 60 * 1000;  // Ask for selfie every two minutes
-
+        // lastSelfieTime  <- ticks last one taken at
+        // int MIN_SELFIE_TIMEOUT = 2 * 60 * 1000;  // Ask for selfie every two minutes
+        // TODO: Schedule a notification to show a new activity
 
     }
 
+    /**
+     * Handle click of image List View item
+     *
+     * @param view
+     */
+    private void launchImageViewActivity(View view)
+    {
+        // TODO: Implement.  Should launch new activity.
+        // TODO: this activity will show selected image, update title, and handle swipes
+        // TODO: back button (no matter how many swipes) returns to this activity
+    }
 }

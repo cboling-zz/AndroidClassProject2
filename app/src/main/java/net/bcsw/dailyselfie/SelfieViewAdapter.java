@@ -14,14 +14,14 @@ import java.util.ArrayList;
 /**
  * Created by cboling on 3/16/2015.
  */
-public class SelphieViewAdapter extends BaseAdapter
+public class SelfieViewAdapter extends BaseAdapter
 {
-    private static final String                  TAG      = "SelphieViewAdapter";
+    private static final String TAG = "SelfieViewAdapter";
     private              ArrayList<SelfieRecord> list     = new ArrayList<SelfieRecord>();
     private static       LayoutInflater          inflater = null;
     private Context mContext;
 
-    public SelphieViewAdapter(Context context)
+    public SelfieViewAdapter(Context context)
     {
         Log.i(TAG, "ctor: entered");
         mContext = context;
