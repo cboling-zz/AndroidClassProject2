@@ -11,12 +11,14 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ListView;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * Main Activity  for Coursera Android Programming #2 Peer Reviews Project
@@ -39,7 +41,7 @@ public class MainActivity extends ActionBarActivity
     static final         String EXTRA_DATE_TAKEN    = "DateTaken";
     static final         String EXTRA_DATE_FILENAME = "ImageFileName";
 
-    private SelfieViewAdapter mAdapter;
+    private SelfieViewAdapter imageListAdapter;
     private ListView          imageListView;
 
     private SharedPreferences prefs;
@@ -64,14 +66,30 @@ public class MainActivity extends ActionBarActivity
 
         lastSelfieTime = prefs.getLong(LAST_SELFIE_TICKS, 0);
 
-        imageListView.setOnClickListener(new View.OnClickListener()
+        imageListView.setOnItemClickListener(new AdapterView.OnItemClickListener()
         {
             @Override
-            public void onClick(View view)
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id)
             {
-                launchImageViewActivity(view);
+                launchImageViewActivity(parent, view, position, id);
             }
         });
+
+        imageListView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener()
+        {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id)
+            {
+                // TODO: [OPTIONAL] Present dialog asking if this item should be deleted
+
+                return false;
+            }
+        });
+        // Create a listview adapter to handle the selfie records and register it with the
+        // main listview
+
+        imageListAdapter = new SelfieViewAdapter(getApplicationContext());
+        imageListView.setAdapter(imageListAdapter);
     }
 
     @Override
@@ -93,13 +111,29 @@ public class MainActivity extends ActionBarActivity
 
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-
         if (id == R.id.action_camera)
         {
             return launchCameraApp();    // Launch Camera
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onResume()
+    {
+        super.onResume();
+
+        // TODO: restore selfie records from persistent storage
+
+    }
+
+    @Override
+    public void onPause()
+    {
+        super.onPause();
+
+        // TODO: save off selfie records to persistent storage
+
     }
 
     /**
@@ -119,7 +153,7 @@ public class MainActivity extends ActionBarActivity
             {
                 // Create the file that should hold the new photo
 
-                Date imageDate = new Date(Calendar.getInstance().getTimeInMillis());
+                Date imageDate = Calendar.getInstance(TimeZone.getTimeZone("GMT")).getTime();
                 File imageFile = SelfieRecord.CreateImageFile(imageDate);
 
                 takePictureIntent.putExtra(EXTRA_DATE_TAKEN, imageDate);
@@ -162,11 +196,9 @@ public class MainActivity extends ActionBarActivity
                 Date imageDate = (Date) extras.get(EXTRA_DATE_TAKEN);
                 String fileName = extras.getString(EXTRA_DATE_FILENAME);
 
-                // TODO: Also extract filename
-
                 SelfieRecord item = new SelfieRecord(imageDate, fileName, thumbnail);
 
-                mAdapter.add(item);
+                imageListAdapter.add(item);
 
                 // Update last selfie time
 
@@ -184,6 +216,8 @@ public class MainActivity extends ActionBarActivity
 
     private void scheduleSelfieNotification()
     {
+        Log.i(TAG, "scheduleSelfieNotification: entered");
+
         // lastSelfieTime  <- ticks last one taken at
         // int MIN_SELFIE_TIMEOUT = 2 * 60 * 1000;  // Ask for selfie every two minutes
         // TODO: Schedule a notification to show a new activity
@@ -195,8 +229,12 @@ public class MainActivity extends ActionBarActivity
      *
      * @param view
      */
-    private void launchImageViewActivity(View view)
+    private void launchImageViewActivity(AdapterView<?> parent, View view, int position, long id)
     {
+        Log.i(TAG, "launchImageViewActivity: entered, position: " + position + ", id: " + id);
+
+        Object item = imageListAdapter.getItem(position);
+
         // TODO: Implement.  Should launch new activity.
         // TODO: this activity will show selected image, update title, and handle swipes
         // TODO: back button (no matter how many swipes) returns to this activity

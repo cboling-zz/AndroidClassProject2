@@ -3,6 +3,7 @@ package net.bcsw.dailyselfie;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
+import android.text.format.DateFormat;
 import android.util.Log;
 import android.widget.ImageView;
 
@@ -11,6 +12,7 @@ import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 
 /**
  * Created by cboling on 3/16/2015.
@@ -51,14 +53,29 @@ public class SelfieRecord
         return thumbnail;
     }
 
+    public String getImageFileName()
+    {
+        return filename;
+    }
+
     public Date getDateTaken()
     {
         return dateTaken;
     }
 
-    public String getImageFileName()
+    /**
+     * Get a nicely formated date containing Month, Day, Year, Hour, Minutes with AM/PM indicator.
+     */
+    public String getDateTakenString()
     {
-        return filename;
+        // Print in local form closest to Month Day Year <space> Hour Minutes AM/PM
+
+        String formatString = DateFormat.getBestDateTimePattern(Locale.getDefault().getDefault(),
+                                                                "MMddyyyy hmm a");
+        SimpleDateFormat format = new SimpleDateFormat(formatString);
+        format.setTimeZone(Calendar.getInstance().getTimeZone());
+
+        return format.format(dateTaken);
     }
 
     @Override

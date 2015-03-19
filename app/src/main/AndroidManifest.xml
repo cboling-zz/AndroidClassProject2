@@ -25,6 +25,16 @@
         <category android:name="android.intent.category.LAUNCHER"/>
       </intent-filter>
     </activity>
+    <activity
+      android:name=".SelfieImageActivity"
+      android:label="@string/title_activity_selfie_image">
+    </activity>
+
+    <activity android:name="NotificationSubActivity">
+      <intent-filter>
+        <action android:name=""/>
+      </intent-filter>
+    </activity>
   </application>
 
 </manifest>

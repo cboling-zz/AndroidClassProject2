@@ -19,13 +19,13 @@ public class SelfieViewAdapter extends BaseAdapter
     private static final String TAG = "SelfieViewAdapter";
     private              ArrayList<SelfieRecord> list     = new ArrayList<SelfieRecord>();
     private static       LayoutInflater          inflater = null;
-    private Context mContext;
+    private Context context;
 
     public SelfieViewAdapter(Context context)
     {
         Log.i(TAG, "ctor: entered");
-        mContext = context;
-        inflater = LayoutInflater.from(mContext);
+        this.context = context;
+        inflater = LayoutInflater.from(context);
     }
 
     public int getCount()
@@ -54,42 +54,34 @@ public class SelfieViewAdapter extends BaseAdapter
 
         if (null == convertView)
         {
-            holder = new ViewHolder();
-            //            newView = inflater
-            //                    .inflate(R.layout.place_badge_view, parent, false);
-            //            holder.flag = (ImageView) newView.findViewById(R.id.flag);
-            //            holder.country = (TextView) newView.findViewById(R.id.country_name);
-            //            holder.place = (TextView) newView.findViewById(R.id.place_name);
-            newView.setTag(holder);
+            // Create an object with the data we need to track and save it to the view tag field
 
+            holder = new ViewHolder();
+
+            holder.thumbnail = (ImageView) newView.findViewById(R.id.thumbnail);
+            holder.filename = (TextView) newView.findViewById(R.id.filename);
+            holder.imageDate = (TextView) newView.findViewById(R.id.imageDate);
+
+            newView = inflater.inflate(R.layout.selfie_image_list_view, parent, false);
+            newView.setTag(holder);
         }
         else
         {
             holder = (ViewHolder) newView.getTag();
         }
-
-        //        holder.flag.setImageBitmap(curr.getFlagBitmap());
-        //        holder.country.setText("Country: " + curr.getCountryName());
-        //        holder.place.setText("Place: " + curr.getPlace());
+        holder.thumbnail.setImageBitmap(curr.getThumbnail());
+        holder.filename.setText(curr.getImageFileName());
+        holder.imageDate.setText("Date: " + curr.getDateTakenString());
 
         return newView;
     }
 
     static class ViewHolder
     {
-        ImageView flag;
-        TextView  country;
-        TextView  place;
+        ImageView thumbnail;
+        TextView  filename;
+        TextView  imageDate;
     }
-
-    //    public boolean intersects(Location location) {
-    //        for (SelfieRecord item : list) {
-    //            if (item.intersects(location)) {
-    //                return true;
-    //            }
-    //        }
-    //        return false;
-    //    }
 
     public void add(SelfieRecord item)
     {

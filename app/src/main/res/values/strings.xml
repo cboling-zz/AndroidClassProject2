@@ -3,4 +3,6 @@
 
   <string name="hello_world">Hello world!</string>
   <string name="action_settings">Settings</string>
+  <string name="title_activity_selfie_image">SelfieImageActivity</string>
+  <string name="intent_received_string">TODO: Got The Intent</string>
 </resources>
