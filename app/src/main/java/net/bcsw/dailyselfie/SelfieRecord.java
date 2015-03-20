@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
+import java.util.TimeZone;
 
 /**
  * Created by cboling on 3/16/2015.
@@ -23,35 +24,45 @@ public class SelfieRecord
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMDD_hhmmss");
 
     // Selfie thumbnail
-    private              Bitmap thumbnail = null;
+    //private Bitmap thumbnail = null;
 
     // Date Taken (UTC)
-    private Date dateTaken = new Date(Calendar.getInstance().getTimeInMillis());
+    private Date dateTaken;
 
     // Filename is UTC date & time formatted
     private String filename;
 
     // Default thumbnail if image not found
 
-    private static Bitmap sStubBitmap = null;
+    private static Bitmap stubBitmap = null;
 
     public SelfieRecord()
     {
         Log.i(TAG, "default ctor: entered");
     }
 
+    /**
+     * Recreate a selfie record
+     * <p/>
+     * This constructor is often called whenever we recreate a selfie record that was saved to
+     * persistent storage (between application restarts)
+     *
+     * @param utcDate
+     * @param imgFile
+     * @param picture
+     */
     public SelfieRecord(Date utcDate, String imgFile, Bitmap picture)
     {
         Log.i(TAG, "picture and date ctor: entered");
-        thumbnail = picture;
+        //thumbnail = picture;
         dateTaken = utcDate;
         filename = imgFile;
     }
 
-    public Bitmap getThumbnail()
-    {
-        return thumbnail;
-    }
+    //    public Bitmap getThumbnail()
+    //    {
+    //        return thumbnail;
+    //    }
 
     public String getImageFileName()
     {
@@ -141,8 +152,11 @@ public class SelfieRecord
         {
             Log.w(TAG, "getThumbnail: Bitmap decode error on file '" + getImageFileName() + "'");
 
-            sStubBitmap = BitmapFactory.decodeResource(view.getResources(), R.drawable.stub);
-            bitmap = sStubBitmap;
+            if (stubBitmap == null)
+            {
+                stubBitmap = BitmapFactory.decodeResource(view.getResources(), R.drawable.stub);
+            }
+            bitmap = stubBitmap;
         }
         return bitmap;
     }
@@ -160,5 +174,16 @@ public class SelfieRecord
         fileDir.mkdirs();
 
         return File.createTempFile(imageFileName, ".jpg", fileDir);
+    }
+
+    /**
+     * Provide a common 'get current time' method for selfie records so time comparisons are more
+     * uniform.
+     *
+     * @return
+     */
+    public static Date GetCurrentTime()
+    {
+        return Calendar.getInstance(TimeZone.getTimeZone("GMT")).getTime();
     }
 }
