@@ -1,11 +1,11 @@
 package net.bcsw.dailyselfie;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
 import android.text.format.DateFormat;
 import android.util.Log;
-import android.widget.ImageView;
 
 import java.io.File;
 import java.io.IOException;
@@ -21,10 +21,16 @@ import java.util.TimeZone;
 public class SelfieRecord
 {
     private static final String           TAG        = "SelfieRecord";
-    private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMDD_hhmmss");
+    private static final SimpleDateFormat fileFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
+    private static final String           dateString = DateFormat.getBestDateTimePattern(
+            Locale.getDefault().getDefault(), "MMddyyyy hmm a");
+    private static final SimpleDateFormat dateFormat = new SimpleDateFormat(dateString);
 
-    // Selfie thumbnail
-    //private Bitmap thumbnail = null;
+    // Thumbnail cache
+
+    private Bitmap thumbnail   = null;
+    private int    thumbWidth  = 0;
+    private int    thumbHeight = 0;
 
     // Date Taken (UTC)
     private Date dateTaken;
@@ -49,20 +55,13 @@ public class SelfieRecord
      *
      * @param utcDate
      * @param imgFile
-     * @param picture
      */
-    public SelfieRecord(Date utcDate, String imgFile, Bitmap picture)
+    public SelfieRecord(Date utcDate, String imgFile)
     {
-        Log.i(TAG, "picture and date ctor: entered");
-        //thumbnail = picture;
+        Log.d(TAG, "picture and date ctor: entered");
         dateTaken = utcDate;
         filename = imgFile;
     }
-
-    //    public Bitmap getThumbnail()
-    //    {
-    //        return thumbnail;
-    //    }
 
     public String getImageFileName()
     {
@@ -79,14 +78,11 @@ public class SelfieRecord
      */
     public String getDateTakenString()
     {
-        // Print in local form closest to Month Day Year <space> Hour Minutes AM/PM
+        // Always adjust displayed string to current timezone where device was on start or
+        // new selfie creation/refresh.
 
-        String formatString = DateFormat.getBestDateTimePattern(Locale.getDefault().getDefault(),
-                                                                "MMddyyyy hmm a");
-        SimpleDateFormat format = new SimpleDateFormat(formatString);
-        format.setTimeZone(Calendar.getInstance().getTimeZone());
-
-        return format.format(dateTaken);
+        dateFormat.setTimeZone(Calendar.getInstance().getTimeZone());
+        return dateFormat.format(dateTaken);
     }
 
     @Override
@@ -113,59 +109,99 @@ public class SelfieRecord
     /**
      * Get a custom bitmap of this record scaled for a particular image view
      *
-     * @param view Image View to scale picture to
-     * @return Resulting bitmap
+     * @return Resulting scaled bitmap
      */
-    public Bitmap getThumbnail(ImageView view)
+    public Bitmap getThumbnail(Context context, int height, int width)
     {
-        // Get path to the file (throws exception if not found)
-
-        String filePath = getImageFileName();
+        Log.d(TAG, "getThumbnail: entered");
 
         // Get the dimensions of the View
 
-        int targetW = view.getWidth();
-        int targetH = view.getHeight();
-
-        // Get the dimensions of the bitmap
-        BitmapFactory.Options bmOptions = new BitmapFactory.Options();
-        bmOptions.inJustDecodeBounds = true;
-
-        BitmapFactory.decodeFile(filePath, bmOptions);
-
-        int photoW = bmOptions.outWidth;
-        int photoH = bmOptions.outHeight;
-
-        // Determine how much to scale down the image
-
-        int scaleFactor = Math.min(photoW / targetW, photoH / targetH);
-
-        // Decode the image file into a Bitmap sized to fill the View
-
-        bmOptions.inJustDecodeBounds = false;
-        bmOptions.inSampleSize = scaleFactor;
-        bmOptions.inPurgeable = true;           // Ignored in level 21+ (Lollipop)
-
-        Bitmap bitmap = BitmapFactory.decodeFile(filePath, bmOptions);
-
-        if (bitmap == null)
+        if (thumbnail == null || thumbWidth != width || thumbHeight != height)
         {
-            Log.w(TAG, "getThumbnail: Bitmap decode error on file '" + getImageFileName() + "'");
+            thumbnail = null;
 
-            if (stubBitmap == null)
+            if (width > 0 && height > 0)
             {
-                stubBitmap = BitmapFactory.decodeResource(view.getResources(), R.drawable.stub);
+                // Get path to the file (throws exception if not found)
+
+                String filePath = getImageFileName();
+
+                // Get the dimensions of the bitmap
+                BitmapFactory.Options bmOptions = new BitmapFactory.Options();
+                bmOptions.inJustDecodeBounds = true;
+
+                BitmapFactory.decodeFile(filePath, bmOptions);
+
+                int photoW = bmOptions.outWidth;
+                int photoH = bmOptions.outHeight;
+
+                // Determine how much to scale down the image
+
+                int scaleFactor = Math.min(photoW / width, photoH / height);
+
+                // Decode the image file into a Bitmap sized to fill the View
+
+                bmOptions.inJustDecodeBounds = false;
+                bmOptions.inSampleSize = scaleFactor;
+                bmOptions.inPurgeable = true;           // Ignored in level 21+ (Lollipop)
+
+                thumbnail = BitmapFactory.decodeFile(filePath, bmOptions);
             }
-            bitmap = stubBitmap;
+            if (thumbnail == null)
+            {
+                Log.w(TAG,
+                      "getThumbnail: Bitmap decode error on file '" + getImageFileName() + "'");
+
+                if (stubBitmap == null)
+                {
+                    stubBitmap = BitmapFactory.decodeResource(context.getResources(),
+                                                              R.drawable.stub);
+                    thumbWidth = stubBitmap.getWidth();
+                    thumbHeight = stubBitmap.getHeight();
+                }
+                thumbnail = stubBitmap;
+            }
+            else
+            {
+                thumbWidth = width;
+                thumbHeight = height;
+            }
         }
-        return bitmap;
+        return thumbnail;
+    }
+
+    public static boolean HasStorage(boolean needWriteAccess)
+    {
+        String state = Environment.getExternalStorageState();
+        Log.d(TAG, "storage state is " + state);
+
+        if (Environment.MEDIA_MOUNTED.equals(state))
+        {
+            if (needWriteAccess)
+            {
+                File fileDir = Environment.getExternalStoragePublicDirectory(
+                        Environment.DIRECTORY_PICTURES);
+                fileDir.mkdirs();
+                return fileDir.canWrite();
+            }
+            else
+            {
+                return true;
+            }
+        }
+        else if (!needWriteAccess && Environment.MEDIA_MOUNTED_READ_ONLY.equals(state))
+        {
+            return true;
+        }
+        return false;
     }
 
     public static File CreateImageFile(Date date) throws IOException
     {
         // Create an image file name
 
-        String imageFileName = dateFormat.format(date);
+        String imageFileName = "JPEG_" + fileFormat.format(date);
         File fileDir = Environment.getExternalStoragePublicDirectory(
                 Environment.DIRECTORY_PICTURES);
 

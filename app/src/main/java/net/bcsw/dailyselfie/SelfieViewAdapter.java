@@ -17,13 +17,15 @@ import java.util.ArrayList;
 public class SelfieViewAdapter extends BaseAdapter
 {
     private static final String TAG = "SelfieViewAdapter";
+    private static final int IMAGE_HEIGHT = 64 * 4;
+    private static final int IMAGE_WIDTH  = 64 * 4;
     private              ArrayList<SelfieRecord> list     = new ArrayList<SelfieRecord>();
     private static       LayoutInflater          inflater = null;
     private Context context;
 
     public SelfieViewAdapter(Context context)
     {
-        Log.i(TAG, "ctor: entered");
+        Log.d(TAG, "ctor: entered");
         this.context = context;
         inflater = LayoutInflater.from(context);
     }
@@ -35,7 +37,7 @@ public class SelfieViewAdapter extends BaseAdapter
 
     public Object getItem(int position)
     {
-        Log.i(TAG, "getItem: entered, position: " + position);
+        Log.d(TAG, "getItem: entered, position: " + position);
         return list.get(position);
     }
 
@@ -46,33 +48,33 @@ public class SelfieViewAdapter extends BaseAdapter
 
     public View getView(int position, View convertView, ViewGroup parent)
     {
-        Log.i(TAG, "getView: entered, position: " + position);
+        Log.d(TAG, "getView: entered, position: " + position);
         View newView = convertView;
         ViewHolder holder;
 
-        SelfieRecord curr = list.get(position);
-
-        if (null == convertView)
+        if (newView == null)
         {
+            newView = inflater.inflate(R.layout.selfie_image_list_view, parent, false);
+
             // Create an object with the data we need to track and save it to the view tag field
 
-            holder = new ViewHolder();
-
-            holder.thumbnail = (ImageView) newView.findViewById(R.id.thumbnail);
-            holder.filename = (TextView) newView.findViewById(R.id.filename);
-            holder.imageDate = (TextView) newView.findViewById(R.id.imageDate);
-
-            newView = inflater.inflate(R.layout.selfie_image_list_view, parent, false);
+            holder = new ViewHolder((ImageView) newView.findViewById(R.id.thumbnail),
+                                    (TextView) newView.findViewById(R.id.filename),
+                                    (TextView) newView.findViewById(R.id.imageDate));
             newView.setTag(holder);
         }
         else
         {
             holder = (ViewHolder) newView.getTag();
         }
-        holder.thumbnail.setImageBitmap(curr.getThumbnail());
-        holder.filename.setText(curr.getImageFileName());
-        holder.imageDate.setText("Date: " + curr.getDateTakenString());
+        SelfieRecord curr = list.get(position);
 
+        if (curr != null)
+        {
+            holder.imageDate.setText("Date: " + curr.getDateTakenString());
+            holder.filename.setText("File: " + curr.getImageFileName());
+            holder.thumbnail.setImageBitmap(curr.getThumbnail(context, IMAGE_HEIGHT, IMAGE_WIDTH));
+        }
         return newView;
     }
 
@@ -81,18 +83,49 @@ public class SelfieViewAdapter extends BaseAdapter
         ImageView thumbnail;
         TextView  filename;
         TextView  imageDate;
-    }
 
-    public void add(SelfieRecord item)
-    {
-        Log.i(TAG, "add: entered" + item.toString());
-        list.add(item);
-        notifyDataSetChanged();
+        public ViewHolder(ImageView iv, TextView fv, TextView dv)
+        {
+            thumbnail = iv;
+            filename = fv;
+            imageDate = dv;
+        }
     }
 
     public ArrayList<SelfieRecord> getList()
     {
         return list;
+    }
+
+    public void add(SelfieRecord item)
+    {
+        Log.d(TAG, "add: entered" + item.toString());
+        list.add(item);
+        notifyDataSetChanged();
+    }
+
+    public boolean remove(int position)
+    {
+        Log.d(TAG, "remove by position: entered, position : " + position);
+
+        if (list.remove(position) != null)
+        {
+            notifyDataSetChanged();
+            return true;
+        }
+        return false;
+    }
+
+    public boolean remove(SelfieRecord item)
+    {
+        Log.d(TAG, "remove by item: entered" + item.toString());
+
+        if (list.remove(item))
+        {
+            notifyDataSetChanged();
+            return true;
+        }
+        return false;
     }
 
     public void removeAllViews()

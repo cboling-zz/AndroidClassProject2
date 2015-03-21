@@ -6,10 +6,12 @@
 
   <ImageView
     android:id="@+id/thumbnail"
-    android:layout_width="128dp"
-    android:layout_height="96dp"
+    android:layout_width="64dp"
+    android:layout_height="64dp"
     android:contentDescription="Selfie Thumbnail"
-    />
+    android:adjustViewBounds="false"
+    android:scaleType="centerCrop"
+    android:layout_alignParentEnd="false"/>
 
   <LinearLayout
     android:id="@+id/text_desc"
@@ -21,18 +23,19 @@
     >
 
     <TextView
-      android:id="@+id/filename"
+      android:id="@+id/imageDate"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:singleLine="true"
       android:ellipsize="end"/>
 
     <TextView
-      android:id="@+id/imageDate"
+      android:id="@+id/filename"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:singleLine="true"
       android:ellipsize="end"/>
+
   </LinearLayout>
 
 </RelativeLayout>
