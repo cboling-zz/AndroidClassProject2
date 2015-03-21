@@ -4,6 +4,8 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.os.Environment;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.text.format.DateFormat;
 import android.util.Log;
 
@@ -18,7 +20,7 @@ import java.util.TimeZone;
 /**
  * Created by cboling on 3/16/2015.
  */
-public class SelfieRecord
+public class SelfieRecord implements Parcelable
 {
     private static final String           TAG        = "SelfieRecord";
     private static final SimpleDateFormat fileFormat = new SimpleDateFormat("yyyyMMdd_HHmmss");
@@ -222,4 +224,39 @@ public class SelfieRecord
     {
         return Calendar.getInstance(TimeZone.getTimeZone("GMT")).getTime();
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Parcelable methods
+
+    private SelfieRecord(Parcel in)
+    {
+        dateTaken = new Date(in.readLong());
+        filename = in.readString();
+    }
+
+    public int describeContents()
+    {
+        return 0;
+    }
+
+    public void writeToParcel(Parcel out, int flags)
+    {
+        out.writeLong(dateTaken.getTime());
+        out.writeString(filename);
+    }
+
+    public static final Parcelable.Creator<SelfieRecord> CREATOR = new Parcelable.Creator<SelfieRecord>()
+    {
+        public SelfieRecord createFromParcel(Parcel in)
+        {
+            return new SelfieRecord(in);
+        }
+
+        public SelfieRecord[] newArray(int size)
+        {
+            return new SelfieRecord[size];
+        }
+    };
+
+
 }

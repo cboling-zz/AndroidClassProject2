@@ -13,6 +13,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.provider.MediaStore;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
@@ -41,7 +42,7 @@ import java.util.Date;
  * may have already taken.  (Show bitmap on left portion of new listView item along with name (ie
  * date & time)
  * <p/>
- * Requirement #3: TODO If the user clicks on the small view, then a large view will open up,
+ * Requirement #3: If the user clicks on the small view, then a large view will open up,
  * showing the selfie in a larger format.
  * <p/>
  * Requirement #4: TODO If the user exits the app and then reopens it, they should have access to
@@ -58,6 +59,8 @@ public class MainActivity extends ActionBarActivity
     static final         int    REQUEST_TAKE_PHOTO  = 1;
     static final         String EXTRA_DATE_TAKEN    = "DateTaken";
     static final         String EXTRA_DATE_FILENAME = "ImageFileName";
+    public static final String PARCELABLE_RECORD = "SelfieRecord";
+
     private static final int MIN_SELFIE_TIMEOUT = 2 * 60 * 1000;
     private static final int SELPHIE_NOTIFY_ID  = 1;
 
@@ -416,11 +419,16 @@ public class MainActivity extends ActionBarActivity
     {
         Log.i(TAG, "launchImageViewActivity: entered, position: " + position + ", id: " + id);
 
-        Object item = imageListAdapter.getItem(position);
+        SelfieRecord record = (SelfieRecord) imageListAdapter.getItem(position);
+        Intent intent = new Intent(this, SelfieImageActivity.class);
 
-        // TODO: Implement.  Should launch new activity.
-        // TODO: this activity will show selected image, update title, and handle swipes
-        // TODO: back button (no matter how many swipes) returns to this activity
+        // Save selfie record into intent extra.  The Parcelable cast is only necessary
+        // if the SelfieRecord implements Serializable, but since we may do that some day,
+        // include the cast anyway just to be safe (Parcelable is much faster).
+
+        intent.putExtra(PARCELABLE_RECORD, (Parcelable) record);
+
+        startActivity(intent);
     }
 
     /**

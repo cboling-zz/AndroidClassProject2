@@ -30,12 +30,6 @@
       android:label="@string/title_activity_selfie_image">
     </activity>
 
-    <activity android:name="NotificationSubActivity">
-      <intent-filter>
-        <!-- TODO: The name below use to be an empty string -->
-        <action android:name="x"/>
-      </intent-filter>
-    </activity>
   </application>
 
 </manifest>
