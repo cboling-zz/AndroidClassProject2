@@ -34,15 +34,22 @@ public class SelfieRecord implements Parcelable
     private int    thumbWidth  = 0;
     private int    thumbHeight = 0;
 
+    // Default thumbnail if image not found
+
+    private static Bitmap stubBitmap = null;
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Non-volatile data saved to SQLite database
+
+    // Database unique index (ID_COLUMN).  The index is always updated with whatever the
+    // database provides when the record is entered
+    private long index = 0;
+
     // Date Taken (UTC)
     private Date dateTaken;
 
     // Filename is UTC date & time formatted
     private String filename;
-
-    // Default thumbnail if image not found
-
-    private static Bitmap stubBitmap = null;
 
     public SelfieRecord()
     {
@@ -65,18 +72,38 @@ public class SelfieRecord implements Parcelable
         filename = imgFile;
     }
 
+    public long getId()
+    {
+        return index;
+    }
+
+    public void setId(long id)
+    {
+        index = id;
+    }
+
+    public long getDateTaken()
+    {
+        return dateTaken.getTime();
+    }
+
+    public void setDateTaken(long time)
+    {
+        dateTaken = new Date(time);
+    }
+
     public String getImageFileName()
     {
         return filename;
     }
 
-    public Date getDateTaken()
+    public void setImageFileName(String name)
     {
-        return dateTaken;
+        filename = name;
     }
 
     /**
-     * Get a nicely formated date containing Month, Day, Year, Hour, Minutes with AM/PM indicator.
+     * Get a nicely formatted date containing Month, Day, Year, Hour, Minutes with AM/PM indicator.
      */
     public String getDateTakenString()
     {
@@ -90,7 +117,7 @@ public class SelfieRecord implements Parcelable
     @Override
     public String toString()
     {
-        return "Selphie: Date Taken: " + getDateTaken().toString() +
+        return "Date: " + dateTaken.toString() +
                ", File: " + getImageFileName();
     }
 

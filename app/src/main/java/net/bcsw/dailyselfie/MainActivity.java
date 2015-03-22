@@ -2,17 +2,13 @@ package net.bcsw.dailyselfie;
 
 import android.app.AlarmManager;
 import android.app.AlertDialog;
-import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
@@ -25,12 +21,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ListView;
-import android.widget.RemoteViews;
 
 import java.io.File;
 import java.io.IOException;
-import java.sql.SQLException;
-import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -58,12 +51,12 @@ import java.util.Date;
  */
 public class MainActivity extends ActionBarActivity
 {
-    private static final String TAG                 = "MainActivity";
-    static final         int    REQUEST_TAKE_PHOTO  = 1;
-    public static final String PARCELABLE_RECORD = "SelfieRecord";
+    private static final String TAG                = "MainActivity";
+    static final         int    REQUEST_TAKE_PHOTO = 1;
+    public static final  String PARCELABLE_RECORD  = "SelfieRecord";
 
     private static final int MIN_SELFIE_TIMEOUT = 2 * 60 * 1000;
-    private static final int SELPHIE_NOTIFY_ID  = 1;
+    public static final int SELPHIE_NOTIFY_ID = 1;
 
     //////////////////////////////////////////////////////////////////////
     // Graphic and UI elements
@@ -78,17 +71,10 @@ public class MainActivity extends ActionBarActivity
     private PendingIntent notificationReceiverPendingIntent;
 
     //////////////////////////////////////////////////////////////////////
-    // Notification Action Elements
-    private Intent        notifyIntent;
-    private PendingIntent notifyContentIntent;
-    private RemoteViews notifyContentView = new RemoteViews("net.bcsw.dailyselfie.MainActivity",
-                                                            R.layout.custom_notification);
-
-    //////////////////////////////////////////////////////////////////////
     // Photo elements (and save/restore)
 
-    private String currentImageFilename;
-    private DatabaseHelper dbHelper;
+    private String                 currentImageFilename;
+    private SelfieRecordDataSource dataSource;
 
     //////////////////////////////////////////////////////////////////////
     // Saved preferences
@@ -127,15 +113,16 @@ public class MainActivity extends ActionBarActivity
         });
         registerForContextMenu(imageListView);
 
+        // Setup/open database if needed
+
+        dataSource = new SelfieRecordDataSource(this);
+        dataSource.open();
+
         // Create a listview adapter to handle the selfie records and register it with the
-        // main listview
+        // main listview.  The adapter is backed by a SQLite database data source
 
-        imageListAdapter = new SelfieViewAdapter(getApplicationContext());
+        imageListAdapter = new SelfieViewAdapter(getApplicationContext(), dataSource);
         imageListView.setAdapter(imageListAdapter);
-
-        // Setup database if needed
-
-        databaseSetup();
 
         // Setup alarm and notification elements
 
@@ -203,10 +190,6 @@ public class MainActivity extends ActionBarActivity
 
         if (id == R.id.action_camera)
         {
-            // Cancel any previous alarm to take a selfie
-
-            alarmManager.cancel(notificationReceiverPendingIntent);
-
             // Launch Camera
 
             return launchCameraApp();
@@ -217,76 +200,24 @@ public class MainActivity extends ActionBarActivity
     @Override
     public void onResume()
     {
+        dataSource.open();
         super.onResume();
-        Log.i(TAG, "onResume: entered");
-
-        dbHelper.getReadableDatabase();
-
-        // TODO: restore selfie records from persistent storage
-
-    }
-
-    // Returns all records in the database
-    private Cursor readRecords()
-    {
-        return dbHelper.getWritableDatabase().query(DatabaseHelper.TABLE_NAME,
-                                                    DatabaseHelper.columns, null, new String[] {},
-                                                    null, null, null);
     }
 
     @Override
     public void onPause()
     {
+        dataSource.close();
         super.onPause();
-        Log.i(TAG, "onPause: entered");
 
-        // For now, always start with a clean database
-        // TODO: change SelfieViewAdapter to auto store and read/refresh from the database
-
-        dbHelper.getWritableDatabase().delete(DatabaseHelper.TABLE_NAME, null, null);
-
-        for (SelfieRecord item : imageListAdapter.getList())
-        {
-            // Save to database
-
-            ContentValues values = new ContentValues();
-
-            values.put(DatabaseHelper.DATE_COLUMN, item.getDateTaken().getTime());
-            values.put(DatabaseHelper.FILE_COLUMN, item.getImageFileName());
-
-            dbHelper.getWritableDatabase().insert(DatabaseHelper.TABLE_NAME, null, values);
-        }
-    }
-
-    private void databaseSetup()
-    {
-        Log.d(TAG, "databaseSetup: entered");
-        dbHelper = new DatabaseHelper(this);
-
-        try
-        {
-            dbHelper.createDataBase();
-
-        }
-        catch (IOException e)
-        {
-            Log.w(TAG, "databaseSetup: exception on create: " + e);
-            throw new Error("Unable to create database");
-        }
-        try
-        {
-            dbHelper.openDataBase();
-        }
-        catch (SQLException e)
-        {
-            Log.w(TAG, "databaseSetup: exception on open: " + e);
-            throw new Error("Unable to open database");
-        }
     }
 
     private void notificationSetup()
     {
+        Log.i(TAG, "notificationSetup: entered");
+
         // Get the AlarmManager Service
+
         alarmManager = (AlarmManager) getSystemService(ALARM_SERVICE);
 
         // Create an Intent to broadcast to the AlarmNotificationReceiver
@@ -297,14 +228,6 @@ public class MainActivity extends ActionBarActivity
         notificationReceiverPendingIntent = PendingIntent.getBroadcast(MainActivity.this, 0,
                                                                        notificationReceiverIntent,
                                                                        0);
-
-        // Prepare notification intent that will start this application classs
-        // and then schedule the first 'take selfie notification'
-
-        notifyIntent = new Intent(getApplicationContext(), MainActivity.class);
-
-        notifyContentIntent = PendingIntent.getActivity(getApplicationContext(), 0, notifyIntent,
-                                                        PendingIntent.FLAG_UPDATE_CURRENT);
         scheduleSelfieNotification();
     }
 
@@ -360,6 +283,16 @@ public class MainActivity extends ActionBarActivity
         {
             try
             {
+                // Cancel any previous alarm to take a selfie
+
+                alarmManager.cancel(notificationReceiverPendingIntent);
+
+                // Kill any active notification (will resume on result if needed)
+
+                NotificationManager notificationManager = (NotificationManager) getSystemService(
+                        Context.NOTIFICATION_SERVICE);
+                notificationManager.cancel(SELPHIE_NOTIFY_ID);
+
                 // Create the file that should hold the new photo
                 //
                 // Change 3rd parameter to 'CreateImageFile' to store it in external public
@@ -369,6 +302,8 @@ public class MainActivity extends ActionBarActivity
                 currentImageFilename = imageFile.toString();
 
                 takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(imageFile));
+
+                // Cancel any active
 
                 Log.i(TAG, "launchCameraApp: starting camera activity for result");
 
@@ -400,11 +335,15 @@ public class MainActivity extends ActionBarActivity
         {
             if (resultCode == RESULT_OK)
             {
+                // Make sure database connection is opened.  This will be called before onResume()
+                // when we return from the camera application
+
+                dataSource.open();
+
                 Date dateTaken = new Date(Calendar.getInstance().getTimeInMillis());
                 String fileName = currentImageFilename;
 
                 SelfieRecord item = new SelfieRecord(dateTaken, fileName);
-
                 imageListAdapter.add(item);
 
                 // Update last selfie time
@@ -429,45 +368,26 @@ public class MainActivity extends ActionBarActivity
      */
     private void scheduleSelfieNotification()
     {
-        Log.d(TAG, "scheduleSelfieNotification: entered");
-
         // Get the last time a selfie was taken
 
         long last = prefs.getLong(LAST_SELFIE_TICKS, 0);
         long sinceLast = SelfieRecord.GetCurrentTime().getTime() - last;
 
-        long delta = (sinceLast >= MIN_SELFIE_TIMEOUT) ? 0 : MIN_SELFIE_TIMEOUT - sinceLast;
+        Log.d(TAG, "scheduleSelfieNotification: entered: " + sinceLast / 1000 +
+                   " seconds since last selfie");
+
+        // Minimum delta is 1 second in case we need one on initial startup
+
+        long delta = (sinceLast >= MIN_SELFIE_TIMEOUT) ? 1000 : MIN_SELFIE_TIMEOUT - sinceLast;
+
+        Log.d(TAG, "scheduleSelfieNotification: next in : ~" + delta / 1000 + " second(s)");
 
         // Use elapsed realtime so that it counts time during sleep but does not wake the
         // device when it goes off (to save power) but it will notify user after the
         // next device wakeup (other app or user intervention)
 
-        //        alarmManager.setInexactRepeating(AlarmManager.ELAPSED_REALTIME,
-        //                                         delta, MIN_SELFIE_TIMEOUT,
-        //                                         notificationReceiverPendingIntent);
-    }
-
-    /**
-     * Generate a 'take a selfie' notification
-     */
-    private void performNotification()
-    {
-        Log.i(TAG, "performNotification: entered");
-
-        // Build the Notification
-
-        Notification.Builder notificationBuilder = new Notification.Builder(
-                getApplicationContext()).setTicker(
-                getResources().getString(R.string.notify_text)).setSmallIcon(
-                R.drawable.ic_menu_camera).setAutoCancel(true).setContentIntent(
-                notifyContentIntent).setContent(notifyContentView);
-
-        // Pass the Notification to the NotificationManager:
-
-        NotificationManager mNotificationManager = (NotificationManager) getSystemService(
-                Context.NOTIFICATION_SERVICE);
-
-        mNotificationManager.notify(SELPHIE_NOTIFY_ID, notificationBuilder.build());
+        alarmManager.setInexactRepeating(AlarmManager.ELAPSED_REALTIME, delta, MIN_SELFIE_TIMEOUT,
+                                         notificationReceiverPendingIntent);
     }
 
     /**
@@ -489,22 +409,4 @@ public class MainActivity extends ActionBarActivity
         startActivity(intent);
     }
 
-    /**
-     * Handle one-shot alarm to display a selfie.
-     */
-    private class AlarmNotificationReceiver extends BroadcastReceiver
-    {
-        private static final String TAG = "AlarmNotifyRcvr";
-
-        @Override
-        public void onReceive(Context context, Intent intent)
-        {
-            // Log occurrence of notify() call
-
-            Log.i(TAG,
-                  "Sending notification at:" + DateFormat.getDateTimeInstance().format(new Date()));
-
-            performNotification();
-        }
-    }
 }

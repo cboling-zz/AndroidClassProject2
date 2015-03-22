@@ -10,24 +10,32 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by cboling on 3/16/2015.
  */
 public class SelfieViewAdapter extends BaseAdapter
 {
-    private static final String TAG = "SelfieViewAdapter";
-    private static final int IMAGE_HEIGHT = 64 * 4;
-    private static final int IMAGE_WIDTH  = 64 * 4;
-    private              ArrayList<SelfieRecord> list     = new ArrayList<SelfieRecord>();
-    private static       LayoutInflater          inflater = null;
-    private Context context;
+    private static final String             TAG          = "SelfieViewAdapter";
+    private static final int                IMAGE_HEIGHT = 64 * 4;
+    private static final int                IMAGE_WIDTH  = 64 * 4;
+    private static       LayoutInflater     inflater     = null;
+    private              List<SelfieRecord> list         = new ArrayList<SelfieRecord>();
+    private Context                context;
+    private SelfieRecordDataSource dataSource;
 
-    public SelfieViewAdapter(Context context)
+    public SelfieViewAdapter(Context context, SelfieRecordDataSource dataSource)
     {
         Log.d(TAG, "ctor: entered");
         this.context = context;
+        this.dataSource = dataSource;
+
         inflater = LayoutInflater.from(context);
+
+        // Restore the list of records from the database (if any)
+
+        list = dataSource.getList();
     }
 
     public int getCount()
@@ -92,7 +100,7 @@ public class SelfieViewAdapter extends BaseAdapter
         }
     }
 
-    public ArrayList<SelfieRecord> getList()
+    public List<SelfieRecord> getList()
     {
         return list;
     }
@@ -101,6 +109,12 @@ public class SelfieViewAdapter extends BaseAdapter
     {
         Log.d(TAG, "add: entered" + item.toString());
         list.add(item);
+
+        // Also add it to the database and make sure we use its index
+
+        long index = dataSource.add(item);
+        item.setId(index);
+
         notifyDataSetChanged();
     }
 
@@ -108,8 +122,11 @@ public class SelfieViewAdapter extends BaseAdapter
     {
         Log.d(TAG, "remove by position: entered, position : " + position);
 
-        if (list.remove(position) != null)
+        SelfieRecord oldRecord = list.remove(position);
+
+        if (oldRecord != null)
         {
+            dataSource.remove(oldRecord);
             notifyDataSetChanged();
             return true;
         }
@@ -122,15 +139,21 @@ public class SelfieViewAdapter extends BaseAdapter
 
         if (list.remove(item))
         {
+            dataSource.remove(item);
             notifyDataSetChanged();
             return true;
         }
         return false;
     }
 
-    public void removeAllViews()
+    public void clear()
     {
-        Log.i(TAG, "removeAllViews: entered");
+        Log.i(TAG, "clear: entered");
+
+        for (SelfieRecord item : list)
+        {
+            dataSource.remove(item);
+        }
         list.clear();
         this.notifyDataSetChanged();
     }
