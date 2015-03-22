@@ -6,11 +6,13 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
@@ -27,6 +29,7 @@ import android.widget.RemoteViews;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.text.DateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -57,32 +60,35 @@ public class MainActivity extends ActionBarActivity
 {
     private static final String TAG                 = "MainActivity";
     static final         int    REQUEST_TAKE_PHOTO  = 1;
-    static final         String EXTRA_DATE_TAKEN    = "DateTaken";
-    static final         String EXTRA_DATE_FILENAME = "ImageFileName";
     public static final String PARCELABLE_RECORD = "SelfieRecord";
 
     private static final int MIN_SELFIE_TIMEOUT = 2 * 60 * 1000;
     private static final int SELPHIE_NOTIFY_ID  = 1;
 
+    //////////////////////////////////////////////////////////////////////
     // Graphic and UI elements
     private SelfieViewAdapter imageListAdapter;
     private ListView          imageListView;
 
+    //////////////////////////////////////////////////////////////////////
     // Alarm Elements
 
     private AlarmManager  alarmManager;
     private Intent        notificationReceiverIntent;
     private PendingIntent notificationReceiverPendingIntent;
 
+    //////////////////////////////////////////////////////////////////////
     // Notification Action Elements
     private Intent        notifyIntent;
     private PendingIntent notifyContentIntent;
     private RemoteViews notifyContentView = new RemoteViews("net.bcsw.dailyselfie.MainActivity",
                                                             R.layout.custom_notification);
 
-    // Photo elements
+    //////////////////////////////////////////////////////////////////////
+    // Photo elements (and save/restore)
 
     private String currentImageFilename;
+    private DatabaseHelper dbHelper;
 
     //////////////////////////////////////////////////////////////////////
     // Saved preferences
@@ -126,6 +132,10 @@ public class MainActivity extends ActionBarActivity
 
         imageListAdapter = new SelfieViewAdapter(getApplicationContext());
         imageListView.setAdapter(imageListAdapter);
+
+        // Setup database if needed
+
+        databaseSetup();
 
         // Setup alarm and notification elements
 
@@ -207,23 +217,71 @@ public class MainActivity extends ActionBarActivity
     @Override
     public void onResume()
     {
+        super.onResume();
         Log.i(TAG, "onResume: entered");
 
-        super.onResume();
+        dbHelper.getReadableDatabase();
 
         // TODO: restore selfie records from persistent storage
 
     }
 
+    // Returns all records in the database
+    private Cursor readRecords()
+    {
+        return dbHelper.getWritableDatabase().query(DatabaseHelper.TABLE_NAME,
+                                                    DatabaseHelper.columns, null, new String[] {},
+                                                    null, null, null);
+    }
+
     @Override
     public void onPause()
     {
+        super.onPause();
         Log.i(TAG, "onPause: entered");
 
-        super.onPause();
+        // For now, always start with a clean database
+        // TODO: change SelfieViewAdapter to auto store and read/refresh from the database
 
-        // TODO: save off selfie records to persistent storage
+        dbHelper.getWritableDatabase().delete(DatabaseHelper.TABLE_NAME, null, null);
 
+        for (SelfieRecord item : imageListAdapter.getList())
+        {
+            // Save to database
+
+            ContentValues values = new ContentValues();
+
+            values.put(DatabaseHelper.DATE_COLUMN, item.getDateTaken().getTime());
+            values.put(DatabaseHelper.FILE_COLUMN, item.getImageFileName());
+
+            dbHelper.getWritableDatabase().insert(DatabaseHelper.TABLE_NAME, null, values);
+        }
+    }
+
+    private void databaseSetup()
+    {
+        Log.d(TAG, "databaseSetup: entered");
+        dbHelper = new DatabaseHelper(this);
+
+        try
+        {
+            dbHelper.createDataBase();
+
+        }
+        catch (IOException e)
+        {
+            Log.w(TAG, "databaseSetup: exception on create: " + e);
+            throw new Error("Unable to create database");
+        }
+        try
+        {
+            dbHelper.openDataBase();
+        }
+        catch (SQLException e)
+        {
+            Log.w(TAG, "databaseSetup: exception on open: " + e);
+            throw new Error("Unable to open database");
+        }
     }
 
     private void notificationSetup()
