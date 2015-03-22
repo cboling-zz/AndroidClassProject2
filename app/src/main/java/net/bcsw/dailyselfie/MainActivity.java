@@ -41,12 +41,12 @@ import java.util.Date;
  * Requirement #3: If the user clicks on the small view, then a large view will open up,
  * showing the selfie in a larger format.
  * <p/>
- * Requirement #4: TODO If the user exits the app and then reopens it, they should have access to
+ * Requirement #4: If the user exits the app and then reopens it, they should have access to
  * all the selfies saved on their device.
  * <p/>
- * Requirement #5: TODO Because the user wants to take selfies periodically over a long period of
- * time, the app should create and set an Alarm that fires roughly once evey two minutes. TODO When
- * one Pulling down on the notification drawer should expose a notification view. TODO Clicking on
+ * Requirement #5: Because the user wants to take selfies periodically over a long period of
+ * time, the app should create and set an Alarm that fires roughly once evey two minutes. When
+ * one Pulling down on the notification drawer should expose a notification view.  Clicking on
  * this notification view should bring the user back to the application.
  */
 public class MainActivity extends ActionBarActivity
@@ -191,7 +191,6 @@ public class MainActivity extends ActionBarActivity
         if (id == R.id.action_camera)
         {
             // Launch Camera
-
             return launchCameraApp();
         }
         return super.onOptionsItemSelected(item);
@@ -283,10 +282,6 @@ public class MainActivity extends ActionBarActivity
         {
             try
             {
-                // Cancel any previous alarm to take a selfie
-
-                alarmManager.cancel(notificationReceiverPendingIntent);
-
                 // Kill any active notification (will resume on result if needed)
 
                 NotificationManager notificationManager = (NotificationManager) getSystemService(
@@ -350,11 +345,8 @@ public class MainActivity extends ActionBarActivity
 
                 SharedPreferences.Editor editor = prefs.edit();
                 editor.putLong(LAST_SELFIE_TICKS, dateTaken.getTime());
-                editor.apply();
+                editor.commit();
             }
-            // Reschedule notify update.  Do it here in case the did not successfully take one
-
-            scheduleSelfieNotification();
         }
     }
 
@@ -408,5 +400,4 @@ public class MainActivity extends ActionBarActivity
 
         startActivity(intent);
     }
-
 }

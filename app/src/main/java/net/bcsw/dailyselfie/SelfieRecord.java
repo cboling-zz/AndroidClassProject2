@@ -142,8 +142,6 @@ public class SelfieRecord implements Parcelable
      */
     public Bitmap getThumbnail(Context context, int height, int width)
     {
-        Log.d(TAG, "getThumbnail: entered");
-
         // Get the dimensions of the View
 
         if (thumbnail == null || thumbWidth != width || thumbHeight != height)

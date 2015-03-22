@@ -20,7 +20,7 @@ public class AlarmNotificationReceiver extends BroadcastReceiver
     // Notification Action Elements
     private Intent        notifyIntent;
     private PendingIntent notifyContentIntent;
-    private RemoteViews notifyContentView = new RemoteViews("net.bcsw.dailyselfie.MainActivity",
+    private RemoteViews notifyContentView = new RemoteViews("net.bcsw.dailyselfie",
                                                             R.layout.custom_notification);
 
     @Override
@@ -33,21 +33,26 @@ public class AlarmNotificationReceiver extends BroadcastReceiver
         // nags the user with a new ticker every alarm interval.
 
         notifyIntent = new Intent(context, MainActivity.class);
-
         notifyContentIntent = PendingIntent.getActivity(context, 0, notifyIntent,
-                                                        PendingIntent.FLAG_CANCEL_CURRENT);
+                                                        PendingIntent.FLAG_UPDATE_CURRENT);
+        String notifyText = context.getResources().getString(R.string.notify_text);
+        notifyContentView.setTextViewText(R.id.text, notifyText);
+
         // Build the Notification
 
-        Notification.Builder notificationBuilder = new Notification.Builder(context).setTicker(
-                context.getResources().getString(R.string.notify_text)).setSmallIcon(
-                R.drawable.ic_menu_camera).setContentIntent(notifyContentIntent).setContent(
-                notifyContentView);
+        Notification.Builder notificationBuilder = new Notification.Builder(context);
+
+        notificationBuilder.setTicker(context.getResources().getString(R.string.notify_text));
+        notificationBuilder.setSmallIcon(R.drawable.ic_menu_camera);
+        notificationBuilder.setContentIntent(notifyContentIntent);
+        notificationBuilder.setContent(notifyContentView);
+        notificationBuilder.setAutoCancel(true);
 
         // Pass the Notification to the NotificationManager:
 
-        NotificationManager mNotificationManager = (NotificationManager) context.getSystemService(
+        NotificationManager notificationManager = (NotificationManager) context.getSystemService(
                 Context.NOTIFICATION_SERVICE);
 
-        mNotificationManager.notify(MainActivity.SELPHIE_NOTIFY_ID, notificationBuilder.build());
+        notificationManager.notify(MainActivity.SELPHIE_NOTIFY_ID, notificationBuilder.build());
     }
 }

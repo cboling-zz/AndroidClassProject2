@@ -25,15 +25,11 @@ public class SelfieRecordDataSource
 
     public SelfieRecordDataSource(Context context)
     {
-        Log.d(TAG, "ctor: entered");
-
         dbHelper = new SelfieRecordDatabaseHelper(context);
     }
 
     public void open() throws SQLException
     {
-        Log.d(TAG, "open: entered");
-
         if (database == null)
         {
             database = dbHelper.getWritableDatabase();
@@ -42,7 +38,6 @@ public class SelfieRecordDataSource
 
     public void close()
     {
-        Log.d(TAG, "close: entered");
         dbHelper.close();
         database = null;
     }
@@ -104,8 +99,6 @@ public class SelfieRecordDataSource
 
     private SelfieRecord cursorToRecord(Cursor cursor)
     {
-        Log.d(TAG, "cursorToRecord: entered");
-
         long index = cursor.getLong(SelfieRecordDatabaseHelper.ID_COLUMN_INDEX);
         Date dateTaken = new Date(cursor.getLong(SelfieRecordDatabaseHelper.DATE_COLUMN_INDEX));
         String imageFile = cursor.getString(SelfieRecordDatabaseHelper.FILE_COLUMN_INDEX);

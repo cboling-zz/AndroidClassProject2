@@ -45,7 +45,6 @@ public class SelfieViewAdapter extends BaseAdapter
 
     public Object getItem(int position)
     {
-        Log.d(TAG, "getItem: entered, position: " + position);
         return list.get(position);
     }
 
@@ -56,7 +55,6 @@ public class SelfieViewAdapter extends BaseAdapter
 
     public View getView(int position, View convertView, ViewGroup parent)
     {
-        Log.d(TAG, "getView: entered, position: " + position);
         View newView = convertView;
         ViewHolder holder;
 
